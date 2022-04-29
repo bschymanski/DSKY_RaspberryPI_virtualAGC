@@ -16,3 +16,30 @@ the Raspberry pi pico attached via USB seems to need a reset after the raspbery 
 ```
 sudo echo -en '\x04' > /dev/ttyACM0
 ```
+
+## Virtual AGC installation
+
+```
+sudo apt-get install 
+libsdl-dev
+libncurses5-dev
+liballegro4-dev
+wx3.0-headers
+tcl
+tk
+git
+sudo apt-get install *wx*dev*
+sudo apt-get install *wx*header*
+
+git clone --depth 1 https://github.com/virtualagc/virtualagc
+
+cd virtualagc
+make install
+
+================================================================
+Run Virtual AGC from its desktop icon.
+Or else, run Virtual AGC from a command-line as follows:
+  cd ~/VirtualAGC/Resources
+  ../bin/VirtualAGC
+================================================================
+```
