@@ -3,7 +3,7 @@ Python Program(s) to run the DSKY
 
 ## Python install and repositorys
 
-Neopixel Librarie from Adafruit
+Neopixel Library from Adafruit
 https://learn.adafruit.com/neopixels-on-raspberry-pi/python-usage
 
 ```
