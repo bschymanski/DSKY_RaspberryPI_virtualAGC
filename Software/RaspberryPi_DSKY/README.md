@@ -43,3 +43,15 @@ Or else, run Virtual AGC from a command-line as follows:
   ../bin/VirtualAGC
 ================================================================
 ```
+
+## start virtualAGC
+
+start virtualAGC in Forground to see output
+```
+/home/pi/VirtualAGC/bin/yaAGC --core="/home/pi/VirtualAGC/Luminary099.bin" --port=19697 --cfg="/home/pi/VirtualAGC/LM.ini"
+```
+
+start virtualAGC as Service without output to shell
+```
+/home/pi/VirtualAGC/bin/yaAGC --core="/home/pi/VirtualAGC/Luminary099.bin" --port=19697 --cfg="/home/pi/VirtualAGC/LM.ini"  &>/dev/null &
+```
