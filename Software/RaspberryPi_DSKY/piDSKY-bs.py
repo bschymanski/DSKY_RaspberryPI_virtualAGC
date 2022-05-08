@@ -52,7 +52,8 @@ import termios
 import fcntl
 import socket
 import serial
-from time import sleep
+from time import sleep, strftime
+from datetime import datetime
 import board
 import neopixel
 #import PySimpleGUI as sg
@@ -137,23 +138,32 @@ sleep(0.2)
 nextion_compacty("0")
 
 
+# IDLE at start, show time
+# set variable to check if a key has been pressed, if yes, stop the idle clock process and start behaving like a proper DSKY
+keypressed = 0
+# should the idle clock run? On Program Start and until a key has been pressed
+idleclock = 1
+
+print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+
+
 # Responsiveness settings.
 if args.slow:
-	PULSE = 0.25
-	lampDeadtime = 0.25
+    PULSE = 0.25
+    lampDeadtime = 0.25
 else:
-	PULSE = 0.05
-	lampDeadtime = 0.1
+    PULSE = 0.05
+    lampDeadtime = 0.1
 
 # Characteristics of the host and port being used for yaAGC communications.  
 if args.host:
-	TCP_IP = args.host
+    TCP_IP = args.host
 else:
-	TCP_IP = 'localhost'
+    TCP_IP = 'localhost'
 if args.port:
-	TCP_PORT = args.port
+    TCP_PORT = args.port
 else:
-	TCP_PORT = 19697
+    TCP_PORT = 19697
 
 ###################################################################################
 # Some utilities I happen to use in my sample hardware abstraction functions, but
@@ -162,19 +172,19 @@ else:
 
 # Given a 3-tuple (channel,value,mask), creates packet data and sends it to yaAGC.
 def packetize(tuple):
-	outputBuffer = bytearray(4)
-	# First, create and output the mask command.
-	outputBuffer[0] = 0x20 | ((tuple[0] >> 3) & 0x0F)
-	outputBuffer[1] = 0x40 | ((tuple[0] << 3) & 0x38) | ((tuple[2] >> 12) & 0x07)
-	outputBuffer[2] = 0x80 | ((tuple[2] >> 6) & 0x3F)
-	outputBuffer[3] = 0xC0 | (tuple[2] & 0x3F)
-	s.send(outputBuffer)
-	# Now, the actual data for the channel.
-	outputBuffer[0] = 0x00 | ((tuple[0] >> 3) & 0x0F)
-	outputBuffer[1] = 0x40 | ((tuple[0] << 3) & 0x38) | ((tuple[1] >> 12) & 0x07)
-	outputBuffer[2] = 0x80 | ((tuple[1] >> 6) & 0x3F)
-	outputBuffer[3] = 0xC0 | (tuple[1] & 0x3F)
-	s.send(outputBuffer)
+    outputBuffer = bytearray(4)
+    # First, create and output the mask command.
+    outputBuffer[0] = 0x20 | ((tuple[0] >> 3) & 0x0F)
+    outputBuffer[1] = 0x40 | ((tuple[0] << 3) & 0x38) | ((tuple[2] >> 12) & 0x07)
+    outputBuffer[2] = 0x80 | ((tuple[2] >> 6) & 0x3F)
+    outputBuffer[3] = 0xC0 | (tuple[2] & 0x3F)
+    s.send(outputBuffer)
+    # Now, the actual data for the channel.
+    outputBuffer[0] = 0x00 | ((tuple[0] >> 3) & 0x0F)
+    outputBuffer[1] = 0x40 | ((tuple[0] << 3) & 0x38) | ((tuple[1] >> 12) & 0x07)
+    outputBuffer[2] = 0x80 | ((tuple[1] >> 6) & 0x3F)
+    outputBuffer[3] = 0xC0 | (tuple[1] & 0x3F)
+    s.send(outputBuffer)
 
 # This particular function parses various keystrokes, like '0' or 'V' and creates
 # packets as if they were DSKY keypresses.  It should be called occasionally as
@@ -192,68 +202,68 @@ def packetize(tuple):
 # the KEY REL key on a DSKY is pressed.
 resetCount = 0
 def parseDskyKey(ch):
-	global resetCount
-	if ch == 'R':
-		resetCount += 1
-		if resetCount >= 5:
-			print("Exiting ...")
-			return ""
-	elif ch != "":
-		resetCount = 0
-	returnValue = []
-	if ch == '0':
-		returnValue.append( (0o15, 0o20, 0o37) )
-	elif ch == '1':
-		returnValue.append( (0o15, 0o1, 0o37) )
-	elif ch == '2':
-    		returnValue.append( (0o15, 0o2, 0o37) )
-	elif ch == '3':
-    		returnValue.append( (0o15, 0o3, 0o37) )
-	elif ch == '4':
-    		returnValue.append( (0o15, 0o4, 0o37) )
-	elif ch == '5':
-    		returnValue.append( (0o15, 0o5, 0o37) )
-	elif ch == '6':
-    		returnValue.append( (0o15, 0o6, 0o37) )
-	elif ch == '7':
-    		returnValue.append( (0o15, 0o7, 0o37) )
-	elif ch == '8':
-    		returnValue.append( (0o15, 0o10, 0o37) )
-	elif ch == '9':
-    		returnValue.append( (0o15, 0o11, 0o37) )
-	elif ch == '+':
-    		returnValue.append( (0o15, 0o32, 0o37) )
-	elif ch == '-':
-    		returnValue.append( (0o15, 0o33, 0o37) )
-	elif ch == 'V':
-    		returnValue.append( (0o15, 0o21, 0o37) )
-	elif ch == 'N':
-    		returnValue.append( (0o15, 0o37, 0o37) )
-	elif ch == 'R':
-    		returnValue.append( (0o15, 0o22, 0o37) )
-	elif ch == 'C':
-    		returnValue.append( (0o15, 0o36, 0o37) )
-	elif ch == 'P':
-    		returnValue.append( (0o32, 0o00000, 0o20000) )
-	elif ch == 'p' or ch == 'PR':
-    		returnValue.append( (0o32, 0o20000, 0o20000) )
-	elif ch == 'K':
-    		returnValue.append( (0o15, 0o31, 0o37) )
-	elif ch == 'E':
-		returnValue.append( (0o15, 0o34, 0o37) )
-	return returnValue	
+    global resetCount
+    if ch == 'R':
+        resetCount += 1
+        if resetCount >= 5:
+            print("Exiting ...")
+            return ""
+    elif ch != "":
+        resetCount = 0
+    returnValue = []
+    if ch == '0':
+        returnValue.append( (0o15, 0o20, 0o37) )
+    elif ch == '1':
+        returnValue.append( (0o15, 0o1, 0o37) )
+    elif ch == '2':
+            returnValue.append( (0o15, 0o2, 0o37) )
+    elif ch == '3':
+            returnValue.append( (0o15, 0o3, 0o37) )
+    elif ch == '4':
+            returnValue.append( (0o15, 0o4, 0o37) )
+    elif ch == '5':
+            returnValue.append( (0o15, 0o5, 0o37) )
+    elif ch == '6':
+            returnValue.append( (0o15, 0o6, 0o37) )
+    elif ch == '7':
+            returnValue.append( (0o15, 0o7, 0o37) )
+    elif ch == '8':
+            returnValue.append( (0o15, 0o10, 0o37) )
+    elif ch == '9':
+            returnValue.append( (0o15, 0o11, 0o37) )
+    elif ch == '+':
+            returnValue.append( (0o15, 0o32, 0o37) )
+    elif ch == '-':
+            returnValue.append( (0o15, 0o33, 0o37) )
+    elif ch == 'V':
+            returnValue.append( (0o15, 0o21, 0o37) )
+    elif ch == 'N':
+            returnValue.append( (0o15, 0o37, 0o37) )
+    elif ch == 'R':
+            returnValue.append( (0o15, 0o22, 0o37) )
+    elif ch == 'C':
+            returnValue.append( (0o15, 0o36, 0o37) )
+    elif ch == 'P':
+            returnValue.append( (0o32, 0o00000, 0o20000) )
+    elif ch == 'p' or ch == 'PR':
+            returnValue.append( (0o32, 0o20000, 0o20000) )
+    elif ch == 'K':
+            returnValue.append( (0o15, 0o31, 0o37) )
+    elif ch == 'E':
+        returnValue.append( (0o15, 0o34, 0o37) )
+    return returnValue	
 
 # This function turns keyboard echo on or off.
 def echoOn(control):
-	fd = sys.stdin.fileno()
-	new = termios.tcgetattr(fd)
-	if control:
-		print("Keyboard echo on")
-		new[3] |= termios.ECHO
-	else:
-		print("Keyboard echo off")
-		new[3] &= ~termios.ECHO
-	termios.tcsetattr(fd, termios.TCSANOW, new)
+    fd = sys.stdin.fileno()
+    new = termios.tcgetattr(fd)
+    if control:
+        print("Keyboard echo on")
+        new[3] |= termios.ECHO
+    else:
+        print("Keyboard echo off")
+        new[3] &= ~termios.ECHO
+    termios.tcsetattr(fd, termios.TCSANOW, new)
 echoOn(False)
 
 # This function is a non-blocking read of a single character from the
@@ -267,79 +277,81 @@ echoOn(False)
 pressedPRO = False
 timePRO = 0
 def get_char_keyboard_nonblock():
-	global pressedPRO, timePRO
-	fd = sys.stdin.fileno()
-	oldterm = termios.tcgetattr(fd)
-	newattr = termios.tcgetattr(fd)
-	newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
-	termios.tcsetattr(fd, termios.TCSANOW, newattr)
-	oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
-	fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
-	c = ""
-	try:
-    		c = sys.stdin.read(1)
-	except IOError: pass
-	termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
-	fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
-	if c == 'p' or c == 'P':
-		pressedPRO = True
-		timePRO = time.time()
-	if c == "" and pressedPRO and time.time() > timePRO + 0.75:
-		pressedPRO = False
-		c = 'PR'
-	return c
+    global pressedPRO, timePRO, keypressed
+    fd = sys.stdin.fileno()
+    oldterm = termios.tcgetattr(fd)
+    newattr = termios.tcgetattr(fd)
+    newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
+    termios.tcsetattr(fd, termios.TCSANOW, newattr)
+    oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
+    c = ""
+    try:
+            c = sys.stdin.read(1)
+    except IOError: pass
+    termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
+    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
+    if c == 'p' or c == 'P':
+        pressedPRO = True
+        timePRO = time.time()
+    if c == "" and pressedPRO and time.time() > timePRO + 0.75:
+        pressedPRO = False
+        c = 'PR'
+    if c != "":
+        keypressed = 1
+    return c
 
 # The following dictionary gives, for each indicator lamp:
 #	Whether or not it is currently lit.
 # This information isn't actually used for anything, but can be useful in a 
 # specific hardware model as a way to know which lamp statuses have changed.
 lampStatuses = {
-	"UPLINK ACTY" : { "isLit" : False },
-	"TEMP" : { "isLit" : False },
-	"NO ATT" : { "isLit" : False },
-	"GIMBAL LOCK" : { "isLit" : False },
-	"DSKY STANDBY" : { "isLit" : False },
-	"PROG" : { "isLit" : False },
-	"KEY REL" : { "isLit" : False },
-	"RESTART" : { "isLit" : False },
-	"OPR ERR" : { "isLit" : False },
-	"TRACKER" : { "isLit" : False },
-	"PRIO DSP" : { "isLit" : False },
-	"ALT" : { "isLit" : False },
-	"NO DAP" : { "isLit" : False },
-	"VEL" : { "isLit" : False }
+    "UPLINK ACTY" : { "isLit" : False },
+    "TEMP" : { "isLit" : False },
+    "NO ATT" : { "isLit" : False },
+    "GIMBAL LOCK" : { "isLit" : False },
+    "DSKY STANDBY" : { "isLit" : False },
+    "PROG" : { "isLit" : False },
+    "KEY REL" : { "isLit" : False },
+    "RESTART" : { "isLit" : False },
+    "OPR ERR" : { "isLit" : False },
+    "TRACKER" : { "isLit" : False },
+    "PRIO DSP" : { "isLit" : False },
+    "ALT" : { "isLit" : False },
+    "NO DAP" : { "isLit" : False },
+    "VEL" : { "isLit" : False }
 }
 # For modifying the lampStatuses[] array.
 def updateLampStatuses(key, value):
-	global lampStatuses
-	if key in lampStatuses:
-		lampStatuses[key]["isLit"] = value
+    global lampStatuses
+    if key in lampStatuses:
+        lampStatuses[key]["isLit"] = value
 
 # Converts a 5-bit code in channel 010 to " ", "0", ..., "9".
 def codeToString(code):
-	if code == 0:
-		return " "
-	elif code == 21:
-		return "0"
-	elif code == 3:
-		return "1"
-	elif code == 25:
-		return "2"
-	elif code == 27:
-		return "3"
-	elif code == 15:
-		return "4"
-	elif code == 30:
-		return "5"
-	elif code == 28:
-		return "6"
-	elif code == 19:
-		return "7"
-	elif code == 29:
-		return "8"
-	elif code == 31:
-		return "9"
-	return "?"
+    if code == 0:
+        return " "
+    elif code == 21:
+        return "0"
+    elif code == 3:
+        return "1"
+    elif code == 25:
+        return "2"
+    elif code == 27:
+        return "3"
+    elif code == 15:
+        return "4"
+    elif code == 30:
+        return "5"
+    elif code == 28:
+        return "6"
+    elif code == 19:
+        return "7"
+    elif code == 29:
+        return "8"
+    elif code == 31:
+        return "9"
+    return "?"
 
 ###################################################################################
 # Hardware abstraction / User-defined functions.  Also, any other platform-specific
@@ -353,22 +365,22 @@ def codeToString(code):
 #	[ (channel0,value0,mask0), (channel1,value1,mask1), ...]
 # and may be en empty list.  
 def inputsForAGC():
-	ch = get_char_keyboard_nonblock()
-	ch = ch.upper()
-	if ch == '_':
-		ch = '-'
-	elif ch == '=':
-		ch = '+'
-	else:
-		returnValue = parseDskyKey(ch)
-	if len(returnValue) > 0:
-        	print("Sending to yaAGC: " + oct(returnValue[0][1]) + "(mask " + oct(returnValue[0][2]) + ") -> channel " + oct(returnValue[0][0]))
-	return returnValue
+    ch = get_char_keyboard_nonblock()
+    ch = ch.upper()
+    if ch == '_':
+        ch = '-'
+    elif ch == '=':
+        ch = '+'
+    else:
+        returnValue = parseDskyKey(ch)
+    if len(returnValue) > 0:
+            print("Sending to yaAGC: " + oct(returnValue[0][1]) + "(mask " + oct(returnValue[0][2]) + ") -> channel " + oct(returnValue[0][0]))
+    return returnValue
 
 def updateLamps():
-	# If there were actual hardware, this is where you could use
-	# lampStatus[] to control the lamps.
-	return
+    # If there were actual hardware, this is where you could use
+    # lampStatus[] to control the lamps.
+    return
 updateLamps()
 
 # This function is called by the event loop only when yaAGC has written
@@ -384,266 +396,266 @@ plusMinusState1 = 0
 plusMinusState2 = 0
 plusMinusState3 = 0
 def outputFromAGC(channel, value):
-	# These lastNN values are just used to cut down on the number of messages printed,
-	# when the same value is output over and over again to the same channel, because
-	# that makes debugging harder.  
-	global last10, last11, last13, last163, plusMinusState1, plusMinusState2, plusMinusState3
-	if (channel == 0o13):
-		value &= 0o3000
-	if (channel == 0o10 and value != last10) or (channel == 0o11 and value != last11) or (channel == 0o13 and value != last13) or (channel == 0o163 and value != last163):
-		if channel == 0o10:
-			last10 = value
-			aaaa = (value >> 11) & 0x0F
-			b = (value >> 10) & 0x01
-			ccccc = (value >> 5) & 0x1F
-			ddddd = value & 0x1F
-			if aaaa != 12:
-				sc = codeToString(ccccc)
-				sd = codeToString(ddddd)
-			if aaaa == 11:
-				print(sc + " -> M1   " + sd + " -> M2")
-				nextion("PROG1", sc)
-				nextion("PROG2", sd)
-			elif aaaa == 10:
-				print(sc + " -> V1   " + sd + " -> V2")
-				nextion("VERB1", sc)
-				nextion("VERB2", sd)
-			elif aaaa == 9:
-				print(sc + " -> N1   " + sd + " -> N2")
-				nextion("NOUN1", sc)
-				nextion("NOUN2", sd)
-			elif aaaa == 8:
-				print("          " + sd + " -> 11")
-				nextion("R1_2", sd)
-			elif aaaa == 7:
-				plusMinus = "  "
-				if b != 0:
-					plusMinus = "1+"
-					plusMinusState1 |= 1
-				else:
-					plusMinusState1 &= ~1
-				# 
-				if ((plusMinusState1 == 0) and (plusMinus == "1+")):
-					nextion("R1_1", " ")
-				elif ((plusMinusState1 == 0) and (plusMinus == "  ")):
-					nextion("R1_1", " ")	
-				elif (plusMinusState1 == 1 and plusMinus == "1+"):
-					nextion("R1_1", "+")
-				print(sc + " -> 12   " + sd + " -> 13   " + plusMinus  + str(plusMinusState1))
-				nextion("R1_3", sc)
-				nextion("R1_4", sd)
-			elif aaaa == 6:
-				plusMinus = "  "
-				if b != 0:
-					plusMinus = "1-"
-					plusMinusState1 |= 2
-				else:
-					plusMinusState1 &= ~2
+    # These lastNN values are just used to cut down on the number of messages printed,
+    # when the same value is output over and over again to the same channel, because
+    # that makes debugging harder.  
+    global last10, last11, last13, last163, plusMinusState1, plusMinusState2, plusMinusState3
+    if (channel == 0o13):
+        value &= 0o3000
+    if (channel == 0o10 and value != last10) or (channel == 0o11 and value != last11) or (channel == 0o13 and value != last13) or (channel == 0o163 and value != last163):
+        if channel == 0o10:
+            last10 = value
+            aaaa = (value >> 11) & 0x0F
+            b = (value >> 10) & 0x01
+            ccccc = (value >> 5) & 0x1F
+            ddddd = value & 0x1F
+            if aaaa != 12:
+                sc = codeToString(ccccc)
+                sd = codeToString(ddddd)
+            if aaaa == 11:
+                print(sc + " -> M1   " + sd + " -> M2")
+                nextion("PROG1", sc)
+                nextion("PROG2", sd)
+            elif aaaa == 10:
+                print(sc + " -> V1   " + sd + " -> V2")
+                nextion("VERB1", sc)
+                nextion("VERB2", sd)
+            elif aaaa == 9:
+                print(sc + " -> N1   " + sd + " -> N2")
+                nextion("NOUN1", sc)
+                nextion("NOUN2", sd)
+            elif aaaa == 8:
+                print("          " + sd + " -> 11")
+                nextion("R1_2", sd)
+            elif aaaa == 7:
+                plusMinus = "  "
+                if b != 0:
+                    plusMinus = "1+"
+                    plusMinusState1 |= 1
+                else:
+                    plusMinusState1 &= ~1
+                # 
+                if ((plusMinusState1 == 0) and (plusMinus == "1+")):
+                    nextion("R1_1", " ")
+                elif ((plusMinusState1 == 0) and (plusMinus == "  ")):
+                    nextion("R1_1", " ")	
+                elif (plusMinusState1 == 1 and plusMinus == "1+"):
+                    nextion("R1_1", "+")
+                print(sc + " -> 12   " + sd + " -> 13   " + plusMinus  + str(plusMinusState1))
+                nextion("R1_3", sc)
+                nextion("R1_4", sd)
+            elif aaaa == 6:
+                plusMinus = "  "
+                if b != 0:
+                    plusMinus = "1-"
+                    plusMinusState1 |= 2
+                else:
+                    plusMinusState1 &= ~2
 
-				if ((plusMinusState1 == 0) and (plusMinus == "1-")):
-					nextion("R1_1", " ")
-				elif ((plusMinusState1 == 0) and (plusMinus == "  ")):
-					nextion("R1_1", " ")
-				elif (plusMinusState1 == 1 and plusMinus == "1-"):
-					nextion("R1_1", "-")
-				print(sc + " -> 14   " + sd + " -> 15   " + plusMinus + str(plusMinusState1))
-				nextion("R1_5", sc)
-				nextion("R1_6", sd)
-			elif aaaa == 5:
-				plusMinus = "  "
-				if b != 0:
-					plusMinus = "2+"
-					plusMinusState2 |= 1
-				else:
-					plusMinusState2 &= ~1
-				if ((plusMinusState2 == 0) and (plusMinus == "2+")):
-					nextion("R2_1", " ")
-				elif ((plusMinusState2 == 0) and (plusMinus == "  ")):
-					nextion("R2_1", " ")
-				elif (plusMinusState2 == 1 and plusMinus == "2+"):
-					nextion("R2_1", "+")
-				print(sc + " -> 21   " + sd + " -> 22   " + plusMinus + str(plusMinusState2))
-				nextion("R2_2", sc)
-				nextion("R2_3", sd)
-			elif aaaa == 4:
-				plusMinus = "  "
-				if b != 0:
-					plusMinus = "2-"
-					plusMinusState2 |= 2
-				else:
-					plusMinusState2 &= ~2
-				if ((plusMinusState2 == 0) and (plusMinus == "2-")):
-					nextion("R2_1", " ")
-				elif ((plusMinusState2 == 0) and (plusMinus == " ")):
-					nextion("R2_1", " ")
-				elif (plusMinusState2 == 1 and plusMinus == "2-"):
-					nextion("R2_1", "-")
-				print(sc + " -> 23   " + sd + " -> 24   " + plusMinus + str(plusMinusState2))
-				nextion("R2_4", sc)
-				nextion("R2_5", sd)
-			elif aaaa == 3:
-				print(sc + " -> 25   " + sd + " -> 31")
-				nextion("R2_6", sc)
-				nextion("R3_2", sd)
-			elif aaaa == 2:
-				plusMinus = "  "
-				if b != 0:
-					plusMinus = "3+"
-					plusMinusState3 |= 1
-				else:
-					plusMinusState3 &= ~1
-				if (plusMinusState3 == 0 and plusMinus == "3+"):
-					nextion("R3_1", " ")
-				elif (plusMinusState3 == 0 and plusMinus == "  "):
-					nextion("R3_1", " ")
-				elif (plusMinusState3 == 1 and plusMinus == "3+"):
-					nextion("R3_1", "+")	
-				print(sc + " -> 32   " + sd + " -> 33   " + plusMinus + str(plusMinusState3))
-				nextion("R3_3", sc)
-				nextion("R3_4", sd)
-			elif aaaa == 1:
-				plusMinus = "  "
-				if b != 0:
-					plusMinus = "3-"
-					plusMinusState3 |= 2
-					#nextion("R3_1", "-")
-				else:
-					plusMinusState3 &= ~2
-					#nextion("R3_1", " ")
-				if (plusMinusState3 == 0 and plusMinus == "3-"):
-					nextion("R3_1", " ")
-				elif (plusMinusState3 == 0 and plusMinus == "  "):
-					nextion("R3_1", " ")
-				elif (plusMinusState3 == 1 and plusMinus == "3-"):
-					nextion("R3_1", "-")	
-				print(sc + " -> 34   " + sd + " -> 35   " + plusMinus + str(plusMinusState3))
-				nextion("R3_5", sc)
-				nextion("R3_6", sd)
-			elif aaaa == 12:
-				vel = "VEL OFF         "
-				if (value & 0x04) != 0:
-					vel = "VEL ON          "
-					updateLampStatuses("VEL", True)
-					pixels[p_vel] = yellow
-				else:
-					updateLampStatuses("VEL", False)
-					pixels[p_vel] = black
-				noAtt = "NO ATT OFF      "
-				if (value & 0x08) != 0:
-					noAtt = "NO ATT ON       "
-					updateLampStatuses("NO ATT", True)
-					pixels[p_no_att] = white
-				else:
-					updateLampStatuses("NO ATT", False)
-					pixels[p_no_att] = black
-				alt = "ALT OFF         "
-				if (value & 0x10) != 0:
-					alt = "ALT ON          "
-					updateLampStatuses("ALT", True)
-					pixels[p_alt] = yellow
-				else:
-					updateLampStatuses("ALT", False)
-					pixels[p_alt] = black
-				gimbalLock = "GIMBAL LOCK OFF "
-				if (value & 0x20) != 0:
-					gimbalLock = "GIMBAL LOCK ON  "
-					updateLampStatuses("GIMBAL LOCK", True)
-					pixels[p_gimbal_lock] = yellow
-				else:
-					updateLampStatuses("GIMBAL LOCK", False)
-					pixels[p_gimbal_lock] = black
-				tracker = "TRACKER OFF     "
-				if (value & 0x80) != 0:
-					tracker = "TRACKER ON      "
-					updateLampStatuses("TRACKER", True)
-					pixels[p_tracker] = yellow
-				else:
-					updateLampStatuses("TRACKER", False)
-					pixels[p_tracker] = black
-				prog = "PROG OFF        "
-				if (value & 0x100) != 0:
-					prog = "PROG ON         "
-					updateLampStatuses("PROG", True)
-					pixels[p_prog] = yellow
-				else:
-					updateLampStatuses("PROG", False)
-					pixels[p_prog] = black
-				#print(vel + "   " + noAtt + "   " + alt + "   " + gimbalLock + "   " + tracker + "   " + prog)
-				updateLamps()
-		elif channel == 0o11:
-			last11 = value
-			compActy = "COMP ACTY OFF   "
-			nextion_compacty("0")
-			if (value & 0x02) != 0:
-				compActy = "COMP ACTY ON    "
-				nextion_compacty("1")
-			uplinkActy = "UPLINK ACTY OFF "
-			pixels[p_uplink_acty] = black
-			if (value & 0x04) != 0:
-				uplinkActy = "UPLINK ACTY ON  "
-				updateLampStatuses("UPLINK ACTY", True)
-				pixels[p_uplink_acty] = white
-				#nextion_compacty("1")
-			else:
-				updateLampStatuses("UPLINK ACTY", False)
-				#nextion_compacty("0")
-				pixels[p_uplink_acty] = black
-			flashing = "V/N NO FLASH    "
-			#print(compActy + "   " + uplinkActy + "   " + "   " + flashing)
-			updateLamps()
-		elif channel == 0o13:
-			last13 = value
-			test = "DSKY TEST       "
-			if (value & 0x200) == 0:
-				test = "DSKY NO TEST    "
-			print(test)
-			updateLamps()
-		elif channel == 0o163:
-			last163 = value
-			if (value & 0x08) != 0:
-				temp = "TEMP ON         "
-				updateLampStatuses("TEMP", True)
-				pixels[p_temp] = yellow
-			else:
-				temp = "TEMP OFF        "
-				updateLampStatuses("TEMP", False)
-				pixels[p_temp] = black
-			if (value & 0o400) != 0:
-				standby = "DSKY STANDBY ON "
-				updateLampStatuses("DSKY STANDBY", True)
-				pixels[p_stby] = white
-			else:
-				standby = "DSKY STANDBY OFF"
-				updateLampStatuses("DSKY STANDBY", False)
-				pixels[p_stby] = black
-			if (value & 0o20) != 0:
-				keyRel = "KEY REL ON      "
-				updateLampStatuses("KEY REL", True)
-				pixels[p_key_rel] = white
-			else:
-				keyRel = "KEY REL OFF     "
-				updateLampStatuses("KEY REL", False)
-				pixels[p_key_rel] = black
-			if (value & 0o100) != 0:
-				oprErr = "OPR ERR FLASH   "
-				updateLampStatuses("OPR ERR", True)
-				pixels[p_opr_err] = white
-			else:
-				oprErr = "OPR ERR OFF     "
-				updateLampStatuses("OPR ERR", False)
-				pixels[p_opr_err] = black
-			if (value & 0o200) != 0:
-				restart = "RESTART ON    "
-				updateLampStatuses("RESTART", True)
-				pixels[p_restart] = yellow
-			else:
-				restart = "RESTART OFF     "
-				updateLampStatuses("RESTART", False)
-				pixels[p_restart] = black
-			#print(temp + "   " + standby + "   " + keyRel + "   " + oprErr + "   " + restart)
-		else:
-			print("Received from yaAGC: " + oct(value) + " -> channel " + oct(channel))
-	return
+                if ((plusMinusState1 == 0) and (plusMinus == "1-")):
+                    nextion("R1_1", " ")
+                elif ((plusMinusState1 == 0) and (plusMinus == "  ")):
+                    nextion("R1_1", " ")
+                elif (plusMinusState1 == 1 and plusMinus == "1-"):
+                    nextion("R1_1", "-")
+                print(sc + " -> 14   " + sd + " -> 15   " + plusMinus + str(plusMinusState1))
+                nextion("R1_5", sc)
+                nextion("R1_6", sd)
+            elif aaaa == 5:
+                plusMinus = "  "
+                if b != 0:
+                    plusMinus = "2+"
+                    plusMinusState2 |= 1
+                else:
+                    plusMinusState2 &= ~1
+                if ((plusMinusState2 == 0) and (plusMinus == "2+")):
+                    nextion("R2_1", " ")
+                elif ((plusMinusState2 == 0) and (plusMinus == "  ")):
+                    nextion("R2_1", " ")
+                elif (plusMinusState2 == 1 and plusMinus == "2+"):
+                    nextion("R2_1", "+")
+                print(sc + " -> 21   " + sd + " -> 22   " + plusMinus + str(plusMinusState2))
+                nextion("R2_2", sc)
+                nextion("R2_3", sd)
+            elif aaaa == 4:
+                plusMinus = "  "
+                if b != 0:
+                    plusMinus = "2-"
+                    plusMinusState2 |= 2
+                else:
+                    plusMinusState2 &= ~2
+                if ((plusMinusState2 == 0) and (plusMinus == "2-")):
+                    nextion("R2_1", " ")
+                elif ((plusMinusState2 == 0) and (plusMinus == " ")):
+                    nextion("R2_1", " ")
+                elif (plusMinusState2 == 1 and plusMinus == "2-"):
+                    nextion("R2_1", "-")
+                print(sc + " -> 23   " + sd + " -> 24   " + plusMinus + str(plusMinusState2))
+                nextion("R2_4", sc)
+                nextion("R2_5", sd)
+            elif aaaa == 3:
+                print(sc + " -> 25   " + sd + " -> 31")
+                nextion("R2_6", sc)
+                nextion("R3_2", sd)
+            elif aaaa == 2:
+                plusMinus = "  "
+                if b != 0:
+                    plusMinus = "3+"
+                    plusMinusState3 |= 1
+                else:
+                    plusMinusState3 &= ~1
+                if (plusMinusState3 == 0 and plusMinus == "3+"):
+                    nextion("R3_1", " ")
+                elif (plusMinusState3 == 0 and plusMinus == "  "):
+                    nextion("R3_1", " ")
+                elif (plusMinusState3 == 1 and plusMinus == "3+"):
+                    nextion("R3_1", "+")	
+                print(sc + " -> 32   " + sd + " -> 33   " + plusMinus + str(plusMinusState3))
+                nextion("R3_3", sc)
+                nextion("R3_4", sd)
+            elif aaaa == 1:
+                plusMinus = "  "
+                if b != 0:
+                    plusMinus = "3-"
+                    plusMinusState3 |= 2
+                    #nextion("R3_1", "-")
+                else:
+                    plusMinusState3 &= ~2
+                    #nextion("R3_1", " ")
+                if (plusMinusState3 == 0 and plusMinus == "3-"):
+                    nextion("R3_1", " ")
+                elif (plusMinusState3 == 0 and plusMinus == "  "):
+                    nextion("R3_1", " ")
+                elif (plusMinusState3 == 1 and plusMinus == "3-"):
+                    nextion("R3_1", "-")	
+                print(sc + " -> 34   " + sd + " -> 35   " + plusMinus + str(plusMinusState3))
+                nextion("R3_5", sc)
+                nextion("R3_6", sd)
+            elif aaaa == 12:
+                vel = "VEL OFF         "
+                if (value & 0x04) != 0:
+                    vel = "VEL ON          "
+                    updateLampStatuses("VEL", True)
+                    pixels[p_vel] = yellow
+                else:
+                    updateLampStatuses("VEL", False)
+                    pixels[p_vel] = black
+                noAtt = "NO ATT OFF      "
+                if (value & 0x08) != 0:
+                    noAtt = "NO ATT ON       "
+                    updateLampStatuses("NO ATT", True)
+                    pixels[p_no_att] = white
+                else:
+                    updateLampStatuses("NO ATT", False)
+                    pixels[p_no_att] = black
+                alt = "ALT OFF         "
+                if (value & 0x10) != 0:
+                    alt = "ALT ON          "
+                    updateLampStatuses("ALT", True)
+                    pixels[p_alt] = yellow
+                else:
+                    updateLampStatuses("ALT", False)
+                    pixels[p_alt] = black
+                gimbalLock = "GIMBAL LOCK OFF "
+                if (value & 0x20) != 0:
+                    gimbalLock = "GIMBAL LOCK ON  "
+                    updateLampStatuses("GIMBAL LOCK", True)
+                    pixels[p_gimbal_lock] = yellow
+                else:
+                    updateLampStatuses("GIMBAL LOCK", False)
+                    pixels[p_gimbal_lock] = black
+                tracker = "TRACKER OFF     "
+                if (value & 0x80) != 0:
+                    tracker = "TRACKER ON      "
+                    updateLampStatuses("TRACKER", True)
+                    pixels[p_tracker] = yellow
+                else:
+                    updateLampStatuses("TRACKER", False)
+                    pixels[p_tracker] = black
+                prog = "PROG OFF        "
+                if (value & 0x100) != 0:
+                    prog = "PROG ON         "
+                    updateLampStatuses("PROG", True)
+                    pixels[p_prog] = yellow
+                else:
+                    updateLampStatuses("PROG", False)
+                    pixels[p_prog] = black
+                #print(vel + "   " + noAtt + "   " + alt + "   " + gimbalLock + "   " + tracker + "   " + prog)
+                updateLamps()
+        elif channel == 0o11:
+            last11 = value
+            compActy = "COMP ACTY OFF   "
+            nextion_compacty("0")
+            if (value & 0x02) != 0:
+                compActy = "COMP ACTY ON    "
+                nextion_compacty("1")
+            uplinkActy = "UPLINK ACTY OFF "
+            pixels[p_uplink_acty] = black
+            if (value & 0x04) != 0:
+                uplinkActy = "UPLINK ACTY ON  "
+                updateLampStatuses("UPLINK ACTY", True)
+                pixels[p_uplink_acty] = white
+                #nextion_compacty("1")
+            else:
+                updateLampStatuses("UPLINK ACTY", False)
+                #nextion_compacty("0")
+                pixels[p_uplink_acty] = black
+            flashing = "V/N NO FLASH    "
+            #print(compActy + "   " + uplinkActy + "   " + "   " + flashing)
+            updateLamps()
+        elif channel == 0o13:
+            last13 = value
+            test = "DSKY TEST       "
+            if (value & 0x200) == 0:
+                test = "DSKY NO TEST    "
+            print(test)
+            updateLamps()
+        elif channel == 0o163:
+            last163 = value
+            if (value & 0x08) != 0:
+                temp = "TEMP ON         "
+                updateLampStatuses("TEMP", True)
+                pixels[p_temp] = yellow
+            else:
+                temp = "TEMP OFF        "
+                updateLampStatuses("TEMP", False)
+                pixels[p_temp] = black
+            if (value & 0o400) != 0:
+                standby = "DSKY STANDBY ON "
+                updateLampStatuses("DSKY STANDBY", True)
+                pixels[p_stby] = white
+            else:
+                standby = "DSKY STANDBY OFF"
+                updateLampStatuses("DSKY STANDBY", False)
+                pixels[p_stby] = black
+            if (value & 0o20) != 0:
+                keyRel = "KEY REL ON      "
+                updateLampStatuses("KEY REL", True)
+                pixels[p_key_rel] = white
+            else:
+                keyRel = "KEY REL OFF     "
+                updateLampStatuses("KEY REL", False)
+                pixels[p_key_rel] = black
+            if (value & 0o100) != 0:
+                oprErr = "OPR ERR FLASH   "
+                updateLampStatuses("OPR ERR", True)
+                pixels[p_opr_err] = white
+            else:
+                oprErr = "OPR ERR OFF     "
+                updateLampStatuses("OPR ERR", False)
+                pixels[p_opr_err] = black
+            if (value & 0o200) != 0:
+                restart = "RESTART ON    "
+                updateLampStatuses("RESTART", True)
+                pixels[p_restart] = yellow
+            else:
+                restart = "RESTART OFF     "
+                updateLampStatuses("RESTART", False)
+                pixels[p_restart] = black
+            #print(temp + "   " + standby + "   " + keyRel + "   " + oprErr + "   " + restart)
+        else:
+            print("Received from yaAGC: " + oct(value) + " -> channel " + oct(channel))
+    return
 
 ###################################################################################
 # Generic initialization (TCP socket setup).  Has no target-specific code, and 
@@ -653,21 +665,21 @@ s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.setblocking(0)
 
 def connectToAGC():
-	while True:
-		try:
-			s.connect((TCP_IP, TCP_PORT))
-			print("Connected to yaAGC (" + TCP_IP + ":" + str(TCP_PORT) + ")")
-			break
-		except socket.error as msg:
-			print("Could not connect to yaAGC (" + TCP_IP + ":" + str(TCP_PORT) + "), exiting: " + str(msg))
-			time.sleep(1)
-			# The following provides a clean exit from the program by simply 
-			# hitting any key.  However if get_char_keyboard_nonblock isn't
-			# defined, just delete the next 4 lines and use Ctrl-C to exit instead.
-			ch = get_char_keyboard_nonblock()
-			if ch != "":
-				print("Exiting ...")
-				sys.exit()
+    while True:
+        try:
+            s.connect((TCP_IP, TCP_PORT))
+            print("Connected to yaAGC (" + TCP_IP + ":" + str(TCP_PORT) + ")")
+            break
+        except socket.error as msg:
+            print("Could not connect to yaAGC (" + TCP_IP + ":" + str(TCP_PORT) + "), exiting: " + str(msg))
+            time.sleep(1)
+            # The following provides a clean exit from the program by simply 
+            # hitting any key.  However if get_char_keyboard_nonblock isn't
+            # defined, just delete the next 4 lines and use Ctrl-C to exit instead.
+            ch = get_char_keyboard_nonblock()
+            if ch != "":
+                print("Exiting ...")
+                sys.exit()
 
 connectToAGC()
 
@@ -678,86 +690,171 @@ connectToAGC()
 # But this section has no target-specific code, and shouldn't need to be modified
 # unless there are bugs.
 
+def clock():
+    global keypressed, idleclock
+    if keypressed == 0 and idleclock == 1:
+        #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+        now = datetime.now() # current date and time
+        year = now.strftime("%Y")
+        nextion("VERB1", year[0])
+        nextion("VERB2", year[1])
+        nextion("NOUN1", year[2])
+        nextion("NOUN2", year[3])
+        #print("year:", year)
+        month = now.strftime("%m")
+        nextion("R1_5", month[0])
+        nextion("R1_6", month[1])
+        #print("month:", month)
+        day = now.strftime("%d")
+        nextion("R1_2", day[0])
+        nextion("R1_3", day[1])
+        #print("day:", day)
+        hour = now.strftime("%H")
+        nextion("R2_2", hour[0])
+        nextion("R2_3", hour[1])
+        #print(f'hour {hour}')
+        minute = now.strftime("%M")
+        nextion("R2_5", minute[0])
+        nextion("R2_6", minute[1])
+        #print(f'minute0 {minute[0]}')
+        #print(f'minute1 {minute[1]}')
+        second = now.strftime("%S")
+        #print(f'second0 second1 {second[0]} {second[1]}')
+        nextion("R3_2", second[0])
+        nextion("R3_3", second[1])
+        millisecond = now.strftime("%f")
+        #print(f'millisecond0 millisecond1 {millisecond[0]} {millisecond[1]}')
+        nextion("R3_5", millisecond[0])
+        nextion("R3_6", millisecond[1])
+        time.sleep(0.1)
+    elif keypressed == 1 and idleclock == 1:
+        print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+        print("Display will be cleared")
+        nextion("VERB1", " ")
+        nextion("VERB2", " ")
+        nextion("NOUN1", " ")
+        nextion("NOUN2", " ")
+        nextion("R1_5", " ")
+        nextion("R1_6", " ")
+        nextion("R1_2", " ")
+        nextion("R1_3", " ")
+        nextion("R2_2", " ")
+        nextion("R2_3", " ")
+        nextion("R2_5", " ")
+        nextion("R2_6", " ")
+        nextion("R3_2", " ")
+        nextion("R3_3", " ")
+        nextion("R3_5", " ")
+        nextion("R3_6", " ")
+        idleclock = 2
+
+def gettemperature():
+    try:
+        #f = open("/sys/class/thermal/thermal_zone0/temp", "r")
+        #pitemp = f.read()
+        f2 = open("/sys/class/thermal/cooling_device0/cur_state", "r")
+        pifan = f2.read()
+    except:
+        print("could not open file")
+    pifan0 ='0'
+    pifan1 ='1'
+    if pifan[0] == pifan1:
+            pixels[p_temp] = yellow
+    elif pifan[0] == pifan0:
+        pixels[p_temp] = black
+    #print(f'pifan {pifan} {type(pifan)}')
+    #print(f'pitemp {pitemp} {type(pitemp)}')
+
 def eventLoop():
-	# Buffer for a packet received from yaAGC.
-	packetSize = 4
-	inputBuffer = bytearray(packetSize)
-	leftToRead = packetSize
-	view = memoryview(inputBuffer)
-	
-	didSomething = False
-	while True:
-		if not didSomething:
-			time.sleep(PULSE)
-		didSomething = False
-		
-		# Check for packet data received from yaAGC and process it.
-		# While these packets are always exactly 4
-		# bytes long, since the socket is non-blocking, any individual read
-		# operation may yield less bytes than that, so the buffer may accumulate data
-		# over time until it fills.	
-		try:
-			numNewBytes = s.recv_into(view, leftToRead)
-		except:
-			numNewBytes = 0
-		if numNewBytes > 0:
-			view = view[numNewBytes:]
-			leftToRead -= numNewBytes
-			if leftToRead == 0:
-				# Prepare for next read attempt.
-				view = memoryview(inputBuffer)
-				leftToRead = packetSize
-				# Parse the packet just read, and call outputFromAGC().
-				# Start with a sanity check.
-				ok = 1
-				if (inputBuffer[0] & 0xF0) != 0x00:
-					ok = 0
-				elif (inputBuffer[1] & 0xC0) != 0x40:
-					ok = 0
-				elif (inputBuffer[2] & 0xC0) != 0x80:
-					ok = 0
-				elif (inputBuffer[3] & 0xC0) != 0xC0:
-					ok = 0
-				# Packet has the various signatures we expect.
-				if ok == 0:
-					# Note that, depending on the yaAGC version, it occasionally
-					# sends either a 1-byte packet (just 0xFF, older versions)
-					# or a 4-byte packet (0xFF 0xFF 0xFF 0xFF, newer versions)
-					# just for pinging the client.  These packets hold no
-					# data and need to be ignored, but for other corrupted packets
-					# we print a message. And try to realign past the corrupted
-					# bytes.
-					if inputBuffer[0] != 0xff or inputBuffer[1] != 0xff or inputBuffer[2] != 0xff or inputBuffer[2] != 0xff:
-						if inputBuffer[0] != 0xff:
-							print("Illegal packet: " + hex(inputBuffer[0]) + " " + hex(inputBuffer[1]) + " " + hex(inputBuffer[2]) + " " + hex(inputBuffer[3]))
-						for i in range(1,packetSize):
-							if (inputBuffer[i] & 0xF0) == 0:
-								j = 0
-								for k in range(i,4):
-									inputBuffer[j] = inputBuffer[k]
-									j += 1
-								view = view[j:]
-								leftToRead = packetSize - j
-				else:
-					channel = (inputBuffer[0] & 0x0F) << 3
-					channel |= (inputBuffer[1] & 0x38) >> 3
-					value = (inputBuffer[1] & 0x07) << 12
-					value |= (inputBuffer[2] & 0x3F) << 6
-					value |= (inputBuffer[3] & 0x3F)
-					outputFromAGC(channel, value)
-				didSomething = True
-		
-		# Check for locally-generated data for which we must generate messages
-		# to yaAGC over the socket.  In theory, the externalData list could contain
-		# any number of channel operations, but in practice (at least for something
-		# like a DSKY implementation) it will actually contain only 0 or 1 operations.
-		externalData = inputsForAGC()
-		if externalData == "":
-			echoOn(True)
-			return
-		for i in range(0, len(externalData)):
-			packetize(externalData[i])
-			didSomething = True
+    # Buffer for a packet received from yaAGC.
+    packetSize = 4
+    inputBuffer = bytearray(packetSize)
+    leftToRead = packetSize
+    view = memoryview(inputBuffer)
+    global keypressed, idleclock
+    didSomething = False
+    while True:
+        gettemperature()
+        if keypressed == 0 and idleclock == 1:
+            #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+            clock()
+        elif keypressed == 1 and idleclock == 1:
+            #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+            clock()
+        
+        if not didSomething:
+            time.sleep(PULSE)
+        didSomething = False
+        
+        
+        # Check for packet data received from yaAGC and process it.
+        # While these packets are always exactly 4
+        # bytes long, since the socket is non-blocking, any individual read
+        # operation may yield less bytes than that, so the buffer may accumulate data
+        # over time until it fills.	
+        try:
+            numNewBytes = s.recv_into(view, leftToRead)
+        except:
+            numNewBytes = 0
+        if numNewBytes > 0:
+            view = view[numNewBytes:]
+            leftToRead -= numNewBytes
+            if leftToRead == 0:
+                # Prepare for next read attempt.
+                view = memoryview(inputBuffer)
+                leftToRead = packetSize
+                # Parse the packet just read, and call outputFromAGC().
+                # Start with a sanity check.
+                ok = 1
+                if (inputBuffer[0] & 0xF0) != 0x00:
+                    ok = 0
+                elif (inputBuffer[1] & 0xC0) != 0x40:
+                    ok = 0
+                elif (inputBuffer[2] & 0xC0) != 0x80:
+                    ok = 0
+                elif (inputBuffer[3] & 0xC0) != 0xC0:
+                    ok = 0
+                # Packet has the various signatures we expect.
+                if ok == 0:
+                    # Note that, depending on the yaAGC version, it occasionally
+                    # sends either a 1-byte packet (just 0xFF, older versions)
+                    # or a 4-byte packet (0xFF 0xFF 0xFF 0xFF, newer versions)
+                    # just for pinging the client.  These packets hold no
+                    # data and need to be ignored, but for other corrupted packets
+                    # we print a message. And try to realign past the corrupted
+                    # bytes.
+                    if inputBuffer[0] != 0xff or inputBuffer[1] != 0xff or inputBuffer[2] != 0xff or inputBuffer[2] != 0xff:
+                        if inputBuffer[0] != 0xff:
+                            print("Illegal packet: " + hex(inputBuffer[0]) + " " + hex(inputBuffer[1]) + " " + hex(inputBuffer[2]) + " " + hex(inputBuffer[3]))
+                        for i in range(1,packetSize):
+                            if (inputBuffer[i] & 0xF0) == 0:
+                                j = 0
+                                for k in range(i,4):
+                                    inputBuffer[j] = inputBuffer[k]
+                                    j += 1
+                                view = view[j:]
+                                leftToRead = packetSize - j
+                else:
+                    channel = (inputBuffer[0] & 0x0F) << 3
+                    channel |= (inputBuffer[1] & 0x38) >> 3
+                    value = (inputBuffer[1] & 0x07) << 12
+                    value |= (inputBuffer[2] & 0x3F) << 6
+                    value |= (inputBuffer[3] & 0x3F)
+                    outputFromAGC(channel, value)
+                didSomething = True
+        
+        # Check for locally-generated data for which we must generate messages
+        # to yaAGC over the socket.  In theory, the externalData list could contain
+        # any number of channel operations, but in practice (at least for something
+        # like a DSKY implementation) it will actually contain only 0 or 1 operations.
+        externalData = inputsForAGC()
+        if externalData == "":
+            echoOn(True)
+            return
+        for i in range(0, len(externalData)):
+            packetize(externalData[i])
+            didSomething = True
+            print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
 eventLoop()
 
