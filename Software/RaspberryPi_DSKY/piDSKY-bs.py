@@ -58,6 +58,8 @@ import board
 import neopixel
 #import PySimpleGUI as sg
 import struct
+import RPi.GPIO as GPIO
+
 
 
 # Parse command-line arguments.
@@ -66,6 +68,18 @@ cli.add_argument("--host", help="Host address of yaAGC, defaulting to localhost.
 cli.add_argument("--port", help="Port for yaAGC, defaulting to 19798.", type=int)
 cli.add_argument("--slow", help="For use on really slow host systems.")
 args = cli.parse_args()
+
+# Reset the raspberry pi pico, after boot it won't start correctly
+
+GPIO.setmode(GPIO.BCM)            # choose BCM or BOARD  
+GPIO.setup(25, GPIO.OUT) # set a port/pin as an output   
+GPIO.output(25, 1)       # set port/pin value to 1/GPIO.HIGH/True  
+time.sleep(0.5)
+GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
+time.sleep(0.1)
+GPIO.output(25, 1)
+time.sleep(0.5)
+#GPIO.cleanup()
 
 # initialize the Status Indicator Panel with the Neopixels
 # NeoPixels must be connected to D10, D12, D18 or D21 to work.
@@ -129,20 +143,140 @@ def nextion_compacty(status):
                 ser.write(b"p0.pic=1")
                 ser.write(b'\xff\xff\xff')
                 ser.close()
-nextion("R1_1", "-")
+#nextion("R1_1", "-")
 
-nextion_compacty("0")
-sleep(0.2)
-nextion_compacty("1")
-sleep(0.2)
-nextion_compacty("0")
+#nextion_compacty("0")
+#sleep(0.2)
+#nextion_compacty("1")
+#sleep(0.2)
+#nextion_compacty("0")
 
+def nextion_clearscreen():
+    nextion("VERB1", " ")
+    sleep(0.1)
+    nextion("VERB2", " ")
+    sleep(0.1)
+    nextion("NOUN1", " ")
+    sleep(0.1)
+    nextion("NOUN2", " ")
+    sleep(0.1)
+    nextion("PROG1", " ")
+    sleep(0.1)
+    nextion("PROG2", " ")
+    sleep(0.1)
+    nextion("R1_1", " ")
+    sleep(0.1)
+    nextion("R1_2", " ")
+    sleep(0.1)
+    nextion("R1_3", " ")
+    sleep(0.1)
+    nextion("R1_4", " ")
+    sleep(0.1)
+    nextion("R1_5", " ")
+    sleep(0.1)
+    nextion("R1_6", " ")
+    sleep(0.1)
+    
+    nextion("R2_1", " ")
+    sleep(0.1)
+    nextion("R2_2", " ")
+    sleep(0.1)
+    nextion("R2_3", " ")
+    sleep(0.1)
+    nextion("R2_4", " ")
+    sleep(0.1)
+    nextion("R2_5", " ")
+    sleep(0.1)
+    nextion("R2_6", " ")
+    sleep(0.1)
+    
+    nextion("R3_1", " ")
+    sleep(0.1)
+    nextion("R3_2", " ")
+    sleep(0.1)
+    nextion("R3_3", " ")
+    sleep(0.1)
+    nextion("R3_4", " ")
+    sleep(0.1)
+    nextion("R3_5", " ")
+    sleep(0.1)
+    nextion("R3_6", " ")
+    sleep(0.1)
+
+
+def nextion_testscreen():
+    nextion("VERB1", "8")
+    sleep(0.1)
+    nextion("VERB2", "8")
+    sleep(0.1)
+    nextion("NOUN1", "8")
+    sleep(0.1)
+    nextion("NOUN2", "8")
+    sleep(0.1)
+    nextion("PROG1", "8")
+    sleep(0.1)
+    nextion("PROG2", "8")
+    sleep(0.1)
+    nextion("R1_1", "+")
+    sleep(0.1)
+    nextion("R1_2", "8")
+    sleep(0.1)
+    nextion("R1_3", "8")
+    sleep(0.1)
+    nextion("R1_4", "8")
+    sleep(0.1)
+    nextion("R1_5", "8")
+    sleep(0.1)
+    nextion("R1_6", "8")
+    sleep(0.1)
+    
+    nextion("R2_1", "+")
+    sleep(0.1)
+    nextion("R2_2", "8")
+    sleep(0.1)
+    nextion("R2_3", "8")
+    sleep(0.1)
+    nextion("R2_4", "8")
+    sleep(0.1)
+    nextion("R2_5", "8")
+    sleep(0.1)
+    nextion("R2_6", "8")
+    sleep(0.1)
+    
+    nextion("R3_1", "+")
+    sleep(0.1)
+    nextion("R3_2", "8")
+    sleep(0.1)
+    nextion("R3_3", "8")
+    sleep(0.1)
+    nextion("R3_4", "8")
+    sleep(0.1)
+    nextion("R3_5", "8")
+    sleep(0.1)
+    nextion("R3_6", "8")
+    sleep(0.1)
+
+
+print("Display will be tested")
+nextion_testscreen()
+sleep(0.5)
+print("Display will be cleared")
+nextion_clearscreen()
 
 # IDLE at start, show time
 # set variable to check if a key has been pressed, if yes, stop the idle clock process and start behaving like a proper DSKY
 keypressed = 0
 # should the idle clock run? On Program Start and until a key has been pressed
 idleclock = 1
+
+idleclock_hour = "00"
+idleclock_hour_old = "00"
+idleclock_minute = "00"
+idleclock_minute_old = "00"
+idleclock_second = "00"
+idleclock_second_old = "00"
+temp_minute = "00"
+temp_minute_old = "00"
 
 print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
@@ -726,42 +860,33 @@ def clock():
         #print(f'millisecond0 millisecond1 {millisecond[0]} {millisecond[1]}')
         nextion("R3_5", millisecond[0])
         nextion("R3_6", millisecond[1])
-        time.sleep(0.1)
+        time.sleep(0.2)
     elif keypressed == 1 and idleclock == 1:
         print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
         print("Display will be cleared")
-        nextion("VERB1", " ")
-        nextion("VERB2", " ")
-        nextion("NOUN1", " ")
-        nextion("NOUN2", " ")
-        nextion("R1_5", " ")
-        nextion("R1_6", " ")
-        nextion("R1_2", " ")
-        nextion("R1_3", " ")
-        nextion("R2_2", " ")
-        nextion("R2_3", " ")
-        nextion("R2_5", " ")
-        nextion("R2_6", " ")
-        nextion("R3_2", " ")
-        nextion("R3_3", " ")
-        nextion("R3_5", " ")
-        nextion("R3_6", " ")
+        nextion_clearscreen()
         idleclock = 2
 
 def gettemperature():
-    try:
-        #f = open("/sys/class/thermal/thermal_zone0/temp", "r")
-        #pitemp = f.read()
-        f2 = open("/sys/class/thermal/cooling_device0/cur_state", "r")
-        pifan = f2.read()
-    except:
-        print("could not open file")
-    pifan0 ='0'
-    pifan1 ='1'
-    if pifan[0] == pifan1:
+    global temp_minute, temp_minute_old
+    now_temp = datetime.now() # current date and time
+    temp_minute = now_temp.strftime("%M")
+    if temp_minute[1] !=  temp_minute_old[1]:
+        print("temp 1 minute check")
+        temp_minute_old = temp_minute
+        try:
+            #f = open("/sys/class/thermal/thermal_zone0/temp", "r")
+            #pitemp = f.read()
+            f2 = open("/sys/class/thermal/cooling_device0/cur_state", "r")
+            pifan = f2.read()
+        except:
+            print("could not open file")
+        pifan0 ='0'
+        pifan1 ='1'
+        if pifan[0] == pifan1:
             pixels[p_temp] = yellow
-    elif pifan[0] == pifan0:
-        pixels[p_temp] = black
+        elif pifan[0] == pifan0:
+            pixels[p_temp] = black
     #print(f'pifan {pifan} {type(pifan)}')
     #print(f'pitemp {pitemp} {type(pitemp)}')
 
@@ -781,7 +906,6 @@ def eventLoop():
         elif keypressed == 1 and idleclock == 1:
             #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
             clock()
-        
         if not didSomething:
             time.sleep(PULSE)
         didSomething = False
