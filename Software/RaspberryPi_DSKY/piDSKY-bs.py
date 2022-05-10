@@ -860,11 +860,13 @@ def clock():
         #print(f'millisecond0 millisecond1 {millisecond[0]} {millisecond[1]}')
         nextion("R3_5", millisecond[0])
         nextion("R3_6", millisecond[1])
+        get_char_keyboard_nonblock()
         time.sleep(0.2)
     elif keypressed == 1 and idleclock == 1:
         print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
         print("Display will be cleared")
         nextion_clearscreen()
+        get_char_keyboard_nonblock()
         idleclock = 2
 
 def gettemperature():
@@ -905,80 +907,80 @@ def eventLoop():
             clock()
         elif keypressed == 1 and idleclock == 1:
             #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+        
             clock()
-        if not didSomething:
-            time.sleep(PULSE)
-        didSomething = False
-        
-        
-        # Check for packet data received from yaAGC and process it.
-        # While these packets are always exactly 4
-        # bytes long, since the socket is non-blocking, any individual read
-        # operation may yield less bytes than that, so the buffer may accumulate data
-        # over time until it fills.	
-        try:
-            numNewBytes = s.recv_into(view, leftToRead)
-        except:
-            numNewBytes = 0
-        if numNewBytes > 0:
-            view = view[numNewBytes:]
-            leftToRead -= numNewBytes
-            if leftToRead == 0:
-                # Prepare for next read attempt.
-                view = memoryview(inputBuffer)
-                leftToRead = packetSize
-                # Parse the packet just read, and call outputFromAGC().
-                # Start with a sanity check.
-                ok = 1
-                if (inputBuffer[0] & 0xF0) != 0x00:
-                    ok = 0
-                elif (inputBuffer[1] & 0xC0) != 0x40:
-                    ok = 0
-                elif (inputBuffer[2] & 0xC0) != 0x80:
-                    ok = 0
-                elif (inputBuffer[3] & 0xC0) != 0xC0:
-                    ok = 0
-                # Packet has the various signatures we expect.
-                if ok == 0:
-                    # Note that, depending on the yaAGC version, it occasionally
-                    # sends either a 1-byte packet (just 0xFF, older versions)
-                    # or a 4-byte packet (0xFF 0xFF 0xFF 0xFF, newer versions)
-                    # just for pinging the client.  These packets hold no
-                    # data and need to be ignored, but for other corrupted packets
-                    # we print a message. And try to realign past the corrupted
-                    # bytes.
-                    if inputBuffer[0] != 0xff or inputBuffer[1] != 0xff or inputBuffer[2] != 0xff or inputBuffer[2] != 0xff:
-                        if inputBuffer[0] != 0xff:
-                            print("Illegal packet: " + hex(inputBuffer[0]) + " " + hex(inputBuffer[1]) + " " + hex(inputBuffer[2]) + " " + hex(inputBuffer[3]))
-                        for i in range(1,packetSize):
-                            if (inputBuffer[i] & 0xF0) == 0:
-                                j = 0
-                                for k in range(i,4):
-                                    inputBuffer[j] = inputBuffer[k]
-                                    j += 1
-                                view = view[j:]
-                                leftToRead = packetSize - j
-                else:
-                    channel = (inputBuffer[0] & 0x0F) << 3
-                    channel |= (inputBuffer[1] & 0x38) >> 3
-                    value = (inputBuffer[1] & 0x07) << 12
-                    value |= (inputBuffer[2] & 0x3F) << 6
-                    value |= (inputBuffer[3] & 0x3F)
-                    outputFromAGC(channel, value)
+        elif keypressed == 1 and idleclock == 2:
+            if not didSomething:
+                time.sleep(PULSE)
+            didSomething = False
+            # Check for packet data received from yaAGC and process it.
+            # While these packets are always exactly 4
+            # bytes long, since the socket is non-blocking, any individual read
+            # operation may yield less bytes than that, so the buffer may accumulate data
+            # over time until it fills.	
+            try:
+                numNewBytes = s.recv_into(view, leftToRead)
+            except:
+                numNewBytes = 0
+            if numNewBytes > 0:
+                view = view[numNewBytes:]
+                leftToRead -= numNewBytes
+                if leftToRead == 0:
+                    # Prepare for next read attempt.
+                    view = memoryview(inputBuffer)
+                    leftToRead = packetSize
+                    # Parse the packet just read, and call outputFromAGC().
+                    # Start with a sanity check.
+                    ok = 1
+                    if (inputBuffer[0] & 0xF0) != 0x00:
+                        ok = 0
+                    elif (inputBuffer[1] & 0xC0) != 0x40:
+                        ok = 0
+                    elif (inputBuffer[2] & 0xC0) != 0x80:
+                        ok = 0
+                    elif (inputBuffer[3] & 0xC0) != 0xC0:
+                        ok = 0
+                    # Packet has the various signatures we expect.
+                    if ok == 0:
+                        # Note that, depending on the yaAGC version, it occasionally
+                        # sends either a 1-byte packet (just 0xFF, older versions)
+                        # or a 4-byte packet (0xFF 0xFF 0xFF 0xFF, newer versions)
+                        # just for pinging the client.  These packets hold no
+                        # data and need to be ignored, but for other corrupted packets
+                        # we print a message. And try to realign past the corrupted
+                        # bytes.
+                        if inputBuffer[0] != 0xff or inputBuffer[1] != 0xff or inputBuffer[2] != 0xff or inputBuffer[2] != 0xff:
+                            if inputBuffer[0] != 0xff:
+                                print("Illegal packet: " + hex(inputBuffer[0]) + " " + hex(inputBuffer[1]) + " " + hex(inputBuffer[2]) + " " + hex(inputBuffer[3]))
+                            for i in range(1,packetSize):
+                                if (inputBuffer[i] & 0xF0) == 0:
+                                    j = 0
+                                    for k in range(i,4):
+                                        inputBuffer[j] = inputBuffer[k]
+                                        j += 1
+                                    view = view[j:]
+                                    leftToRead = packetSize - j
+                    else:
+                        channel = (inputBuffer[0] & 0x0F) << 3
+                        channel |= (inputBuffer[1] & 0x38) >> 3
+                        value = (inputBuffer[1] & 0x07) << 12
+                        value |= (inputBuffer[2] & 0x3F) << 6
+                        value |= (inputBuffer[3] & 0x3F)
+                        outputFromAGC(channel, value)
+                    didSomething = True
+            
+            # Check for locally-generated data for which we must generate messages
+            # to yaAGC over the socket.  In theory, the externalData list could contain
+            # any number of channel operations, but in practice (at least for something
+            # like a DSKY implementation) it will actually contain only 0 or 1 operations.
+            externalData = inputsForAGC()
+            if externalData == "":
+                echoOn(True)
+                return
+            for i in range(0, len(externalData)):
+                packetize(externalData[i])
                 didSomething = True
-        
-        # Check for locally-generated data for which we must generate messages
-        # to yaAGC over the socket.  In theory, the externalData list could contain
-        # any number of channel operations, but in practice (at least for something
-        # like a DSKY implementation) it will actually contain only 0 or 1 operations.
-        externalData = inputsForAGC()
-        if externalData == "":
-            echoOn(True)
-            return
-        for i in range(0, len(externalData)):
-            packetize(externalData[i])
-            didSomething = True
-            #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+                #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
 eventLoop()
 
