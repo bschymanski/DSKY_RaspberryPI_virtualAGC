@@ -73,13 +73,13 @@ args = cli.parse_args()
 
 GPIO.setmode(GPIO.BCM)            # choose BCM or BOARD  
 GPIO.setup(25, GPIO.OUT) # set a port/pin as an output   
-GPIO.output(25, 1)       # set port/pin value to 1/GPIO.HIGH/True  
-time.sleep(0.5)
 GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
-time.sleep(0.1)
-GPIO.output(25, 1)
 time.sleep(0.5)
-#GPIO.cleanup()
+GPIO.output(25, 1)       # set port/pin value to 1/GPIO.HIGH/True  
+time.sleep(0.2)
+GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
+time.sleep(0.5)
+
 
 # initialize the Status Indicator Panel with the Neopixels
 # NeoPixels must be connected to D10, D12, D18 or D21 to work.
@@ -978,7 +978,7 @@ def eventLoop():
         for i in range(0, len(externalData)):
             packetize(externalData[i])
             didSomething = True
-            print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+            #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
 eventLoop()
 
