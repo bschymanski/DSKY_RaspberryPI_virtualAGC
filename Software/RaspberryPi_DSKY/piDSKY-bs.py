@@ -814,8 +814,8 @@ def connectToAGC():
             if ch != "":
                 print("Exiting ...")
                 sys.exit()
-
-connectToAGC()
+connectToAGCneeded = 0
+#connectToAGC()
 
 ###################################################################################
 # Event loop.  Just check periodically for output from yaAGC (in which case the
@@ -874,7 +874,7 @@ def gettemperature():
     now_temp = datetime.now() # current date and time
     temp_minute = now_temp.strftime("%M")
     if temp_minute[1] !=  temp_minute_old[1]:
-        print("temp 1 minute check")
+        #print("temp 1 minute check")
         temp_minute_old = temp_minute
         try:
             #f = open("/sys/class/thermal/thermal_zone0/temp", "r")
@@ -898,7 +898,7 @@ def eventLoop():
     inputBuffer = bytearray(packetSize)
     leftToRead = packetSize
     view = memoryview(inputBuffer)
-    global keypressed, idleclock
+    global keypressed, idleclock, connectToAGCneeded
     didSomething = False
     while True:
         gettemperature()
@@ -910,6 +910,12 @@ def eventLoop():
         
             clock()
         elif keypressed == 1 and idleclock == 2:
+            # a key has been pressed, which means we want to play with the AGC.
+            # we should connect to the AGC then
+            if connectToAGCneeded == 0:
+                connectToAGC()
+                connectToAGCneeded = 1
+
             if not didSomething:
                 time.sleep(PULSE)
             didSomething = False
