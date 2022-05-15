@@ -6,7 +6,7 @@ You can find a lot(!) if not everthing about the AGC and the DSKY on the ibiblio
 https://www.ibiblio.org/apollo/index.html
 There you can also find the github repository with the python scripts that i used as a start
 
-THe CAD Drawings are available here:
+Th CAD Drawings are available here:
 https://github.com/ManoDaSilva
 
 ![IMG20220515180143](https://user-images.githubusercontent.com/34037236/168482523-51550361-b104-4aed-b4e6-c1eda090f97c.jpg)
