@@ -55,3 +55,8 @@ start virtualAGC as Service without output to shell
 ```
 /home/pi/VirtualAGC/bin/yaAGC --core="/home/pi/VirtualAGC/Luminary099.bin" --port=19699 --cfg="/home/pi/VirtualAGC/LM.ini"  &>/dev/null &
 ```
+
+start piDSKY-bs.py
+```
+sudo python DSKY_RaspberryPI_virtualAGC/Software/RaspberryPi_DSKY/piDSKY-bs.py
+```
