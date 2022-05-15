@@ -117,7 +117,7 @@ green =  (0, 120, 0)
 white = (180, 140, 140)
 black = (0, 0, 0)
 
-ser = serial.Serial( port='/dev/ttyS0',baudrate = 9600,timeout=1)
+ser = serial.Serial( port='/dev/ttyS0',baudrate = 9600,timeout=0.1)
 ser.close()
 k=struct.pack('B', 0xff)
 eof = "\xff\xff\xff"
@@ -135,12 +135,24 @@ def nextion(command, arg):
 def nextion_compacty(status):
         if status == "0":
                 ser.open()
-                ser.write(b"p0.pic=2")
+                ser.write(b"p0.pic=1")
                 ser.write(b'\xff\xff\xff')
                 ser.close()
         elif status == "1":
                 ser.open()
-                ser.write(b"p0.pic=1")
+                ser.write(b"p0.pic=2")
+                ser.write(b'\xff\xff\xff')
+                ser.close()
+
+def nextion_vn_blink(status):
+        if status == 0:
+                ser.open()
+                ser.write(b"vn_blink_true.val=0")
+                ser.write(b'\xff\xff\xff')
+                ser.close()
+        elif status == 1:
+                ser.open()
+                ser.write(b"vn_blink_true.val=1")
                 ser.write(b'\xff\xff\xff')
                 ser.close()
 #nextion("R1_1", "-")
@@ -152,6 +164,8 @@ def nextion_compacty(status):
 #nextion_compacty("0")
 
 def nextion_clearscreen():
+    nextion_compacty(0)
+    sleep(0.1)
     nextion("VERB1", " ")
     sleep(0.1)
     nextion("VERB2", " ")
@@ -205,6 +219,7 @@ def nextion_clearscreen():
 
 
 def nextion_testscreen():
+    sleep(0.1)
     nextion("VERB1", "8")
     sleep(0.1)
     nextion("VERB2", "8")
@@ -280,6 +295,7 @@ temp_minute_old = "00"
 
 print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
+vnFlashing = False
 
 # Responsiveness settings.
 if args.slow:
@@ -297,7 +313,7 @@ else:
 if args.port:
     TCP_PORT = args.port
 else:
-    TCP_PORT = 19697
+    TCP_PORT = 19699
 
 ###################################################################################
 # Some utilities I happen to use in my sample hardware abstraction functions, but
@@ -533,7 +549,7 @@ def outputFromAGC(channel, value):
     # These lastNN values are just used to cut down on the number of messages printed,
     # when the same value is output over and over again to the same channel, because
     # that makes debugging harder.  
-    global last10, last11, last13, last163, plusMinusState1, plusMinusState2, plusMinusState3
+    global last10, last11, last13, last163, plusMinusState1, plusMinusState2, plusMinusState3, vnFlashing
     if (channel == 0o13):
         value &= 0o3000
     if (channel == 0o10 and value != last10) or (channel == 0o11 and value != last11) or (channel == 0o13 and value != last13) or (channel == 0o163 and value != last163):
@@ -735,6 +751,17 @@ def outputFromAGC(channel, value):
                 #nextion_compacty("0")
                 pixels[p_uplink_acty] = black
             flashing = "V/N NO FLASH    "
+            if (value & 0x20) != 0:
+                if not vnFlashing:
+                    vnFlashing = True
+                    flashing = "V/N FLASH       "
+                    #pixels[p_clk] = white
+                    nextion_vn_blink(1)
+            else:
+                if vnFlashing != False:
+                    vnFlashing = False
+                    #pixels[p_clk] = black
+                    nextion_vn_blink(0)
             #print(compActy + "   " + uplinkActy + "   " + "   " + flashing)
             updateLamps()
         elif channel == 0o13:
@@ -823,50 +850,91 @@ connectToAGCneeded = 0
 # user-defined function inputsForAGC (in which case a message is sent to yaAGC).
 # But this section has no target-specific code, and shouldn't need to be modified
 # unless there are bugs.
-
+old_year = "0000"
+old_month = "00"
+old_day = "00"
+old_hour = "00"
+old_minute = "00"
+old_second = "00"
+old_millisecond = "0"
+old_millisecond2 = "0"
 def clock():
-    global keypressed, idleclock
+    global keypressed, idleclock, old_year, old_month, old_day, old_hour, old_minute, old_second, old_millisecond, old_millisecond2
     if keypressed == 0 and idleclock == 1:
         #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+        pixels[p_stby] = white
+        pixels[p_key_rel] = white
         now = datetime.now() # current date and time
         year = now.strftime("%Y")
-        nextion("VERB1", year[0])
-        nextion("VERB2", year[1])
-        nextion("NOUN1", year[2])
-        nextion("NOUN2", year[3])
-        #print("year:", year)
+        if (old_year != year):
+            nextion("VERB1", year[0])
+            nextion("VERB2", year[1])
+            nextion("NOUN1", year[2])
+            nextion("NOUN2", year[3])
+            old_year = year
+            #print(f'year: {year} {type(year)} {old_year} {type(old_year)} ')
         month = now.strftime("%m")
-        nextion("R1_5", month[0])
-        nextion("R1_6", month[1])
-        #print("month:", month)
+        if (old_month != month):
+            nextion("R1_5", month[0])
+            nextion("R1_6", month[1])
+            old_month = month
+            #print(f'month: {month} {type(month)} {old_month} {type(old_month)} ')
+
         day = now.strftime("%d")
-        nextion("R1_2", day[0])
-        nextion("R1_3", day[1])
-        #print("day:", day)
-        hour = now.strftime("%H")
-        nextion("R2_2", hour[0])
-        nextion("R2_3", hour[1])
-        #print(f'hour {hour}')
+        if (old_day != day):
+            nextion("R1_2", day[0])
+            nextion("R1_3", day[1])
+            old_day = day
+            #print(f'day: {day} {type(day)} {old_day} {type(old_day)} ')
+        
+        hour = now.strftime("%H")        
+        if (old_hour != hour):
+            nextion("R2_2", hour[0])
+            nextion("R2_3", hour[1])
+            old_hour = hour
+            #print(f'hour: {hour} {type(hour)} {old_hour} {type(old_hour)} ')
+        
         minute = now.strftime("%M")
-        nextion("R2_5", minute[0])
-        nextion("R2_6", minute[1])
-        #print(f'minute0 {minute[0]}')
-        #print(f'minute1 {minute[1]}')
+        if (old_minute != minute):
+            nextion("R2_5", minute[0])
+            nextion("R2_6", minute[1])
+            old_minute = minute
+            #print(f'minute: {minute} {type(minute)} {old_minute} {type(old_minute)} ')
+        
         second = now.strftime("%S")
-        #print(f'second0 second1 {second[0]} {second[1]}')
-        nextion("R3_2", second[0])
-        nextion("R3_3", second[1])
+        if (old_second != second):
+            nextion("R3_2", second[0])
+            nextion("R3_3", second[1])
+            old_second = second
+            #print(f'second: {second} {type(second)} {old_second} {type(old_second)} ')
+        
         millisecond = now.strftime("%f")
         #print(f'millisecond0 millisecond1 {millisecond[0]} {millisecond[1]}')
-        nextion("R3_5", millisecond[0])
-        nextion("R3_6", millisecond[1])
+        if (old_millisecond != millisecond[0]):
+            nextion("R3_5", millisecond[0])
+            old_millisecond = millisecond[0]
+
+        if (old_millisecond2 != millisecond[1]):
+            nextion("R3_6", millisecond[1])
+            old_millisecond2 = millisecond[1]
+
+
         get_char_keyboard_nonblock()
-        time.sleep(0.2)
+        time.sleep(0.1)
+        #ser.open()
+        #hexData= ser.read(20).hex()
+        #if (hexData != ""):
+        #    print(f' hexdata {hexData}')
+        #ser.close()
+        #hexData = ""
+
     elif keypressed == 1 and idleclock == 1:
         print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
         print("Display will be cleared")
+        pixels[p_stby] = black
         nextion_clearscreen()
         get_char_keyboard_nonblock()
+        pixels[p_key_rel] = black
         idleclock = 2
 
 def gettemperature():
@@ -991,6 +1059,3 @@ def eventLoop():
 eventLoop()
 
 os._exit(0)
-
-
-
