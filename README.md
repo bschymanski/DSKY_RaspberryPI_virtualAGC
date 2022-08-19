@@ -7,7 +7,7 @@ https://www.ibiblio.org/apollo/index.html
 There you can also find the github repository with the python scripts that i used as a start
 
 Th CAD Drawings are available here:
-https://github.com/ManoDaSilva
+https://github.com/rrainey/agc-mechanical-cad
 
 ![IMG20220515180143](https://user-images.githubusercontent.com/34037236/168482523-51550361-b104-4aed-b4e6-c1eda090f97c.jpg)
 
