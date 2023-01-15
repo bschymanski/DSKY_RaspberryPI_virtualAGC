@@ -51,6 +51,7 @@ import threading
 import termios
 import fcntl
 import socket
+import select
 import serial
 from time import sleep, strftime
 from datetime import datetime
@@ -71,14 +72,14 @@ args = cli.parse_args()
 
 # Reset the raspberry pi pico, after boot it won't start correctly
 
-GPIO.setmode(GPIO.BCM)            # choose BCM or BOARD  
-GPIO.setup(25, GPIO.OUT) # set a port/pin as an output   
-GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
-time.sleep(0.5)
-GPIO.output(25, 1)       # set port/pin value to 1/GPIO.HIGH/True  
-time.sleep(0.2)
-GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
-time.sleep(0.5)
+#GPIO.setmode(GPIO.BCM)            # choose BCM or BOARD  
+#GPIO.setup(25, GPIO.OUT) # set a port/pin as an output   
+#GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
+#time.sleep(0.2)
+#GPIO.output(25, 1)       # set port/pin value to 1/GPIO.HIGH/True  
+#time.sleep(0.2)
+#GPIO.output(25, 0)       # set port/pin value to 0/GPIO.LOW/False  
+#time.sleep(0.2)
 
 
 # initialize the Status Indicator Panel with the Neopixels
@@ -111,20 +112,30 @@ p_vel = 0
 
 
 # define some colors for the Indicator Panel
-yellow = (180, 120, 0)
+yellow = (100, 70, 0)
 red  = (160, 0, 0)
-green =  (0, 120, 0)
-white = (180, 140, 140)
+green =  (0, 100, 0)
+white = (100, 70, 70)
 black = (0, 0, 0)
 
 ser = serial.Serial( port='/dev/ttyS0',baudrate = 9600,timeout=0.1)
 ser.close()
 k=struct.pack('B', 0xff)
 eof = "\xff\xff\xff"
-
+nextion_sleep = 0.05
 def nextion(command, arg):
         progstring = ''
         progstring = command+'.txt="'+arg+'"'
+        #k = struct.pack('B', progstring)
+        #print("command string: ",command,  progstring)
+        ser.open()
+        ser.write(progstring.encode())
+        ser.write(b'\xff\xff\xff')
+        ser.close()
+
+def nextion_dim(arg):
+        progstring = ''
+        progstring = 'dim='+str(arg)
         #k = struct.pack('B', progstring)
         #print("command string: ",command,  progstring)
         ser.open()
@@ -160,121 +171,124 @@ def nextion_vn_blink(status):
 #nextion_compacty("0")
 #sleep(0.2)
 #nextion_compacty("1")
-#sleep(0.2)
+#sleep(0.2)nextio_sleep
 #nextion_compacty("0")
 
 def nextion_clearscreen():
     nextion_compacty(0)
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("VERB1", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("VERB2", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("NOUN1", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("NOUN2", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("PROG1", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("PROG2", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_1", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_2", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_3", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_4", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_5", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_6", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     
     nextion("R2_1", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_2", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_3", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_4", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_5", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_6", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     
     nextion("R3_1", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_2", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_3", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_4", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_5", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_6", " ")
-    sleep(0.1)
+    sleep(nextion_sleep)
 
 
 def nextion_testscreen():
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("VERB1", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("VERB2", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("NOUN1", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("NOUN2", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("PROG1", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("PROG2", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_1", "+")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_2", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_3", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_4", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_5", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R1_6", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     
     nextion("R2_1", "+")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_2", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_3", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_4", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_5", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R2_6", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     
     nextion("R3_1", "+")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_2", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_3", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_4", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_5", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
     nextion("R3_6", "8")
-    sleep(0.1)
+    sleep(nextion_sleep)
 
+print("Display will be dimmned")
+nextion_dim(20)
+sleep(0.1)
 
 print("Display will be tested")
 nextion_testscreen()
-sleep(0.5)
+sleep(0.1)
 print("Display will be cleared")
 nextion_clearscreen()
 
@@ -293,7 +307,7 @@ idleclock_second_old = "00"
 temp_minute = "00"
 temp_minute_old = "00"
 
-print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+#print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
 vnFlashing = False
 
@@ -313,7 +327,7 @@ else:
 if args.port:
     TCP_PORT = args.port
 else:
-    TCP_PORT = 19699
+    TCP_PORT = 19797
 
 ###################################################################################
 # Some utilities I happen to use in my sample hardware abstraction functions, but
@@ -516,15 +530,19 @@ def codeToString(code):
 # and may be en empty list.  
 def inputsForAGC():
     ch = get_char_keyboard_nonblock()
+    #print(f'Key pressed      : {ch}')
     ch = ch.upper()
+    #print(f'Key pressed upper: {ch}')
     if ch == '_':
         ch = '-'
     elif ch == '=':
         ch = '+'
     else:
         returnValue = parseDskyKey(ch)
+        #print(f'Key returnValue  : {returnValue}')
     if len(returnValue) > 0:
-            print("Sending to yaAGC: " + oct(returnValue[0][1]) + "(mask " + oct(returnValue[0][2]) + ") -> channel " + oct(returnValue[0][0]))
+            print(f'Sending to yaAGC non-Oct: {returnValue[0][1]} mask  {returnValue[0][2]} -> channel {returnValue[0][0]}')
+            print("Sending to yaAGC     Oct: " + oct(returnValue[0][1]) + "(mask " + oct(returnValue[0][2]) + ") -> channel " + oct(returnValue[0][0]))
     return returnValue
 
 def updateLamps():
