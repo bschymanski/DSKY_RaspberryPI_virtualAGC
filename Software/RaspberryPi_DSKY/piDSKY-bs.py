@@ -44,6 +44,7 @@
 
 import time
 import os
+import subprocess
 import signal
 import sys
 import argparse
@@ -978,6 +979,28 @@ def gettemperature():
     #print(f'pifan {pifan} {type(pifan)}')
     #print(f'pitemp {pitemp} {type(pitemp)}')
 
+def check_ntp(args = '-c rv'):
+    cmd = 'ntpq'
+    temp = subprocess.Popen([cmd, args], stdout = subprocess.PIPE)
+    output = str(temp.communicate())
+    output = output.split('\n')
+    output = output[0].split('\\')
+    res = []
+    for line in output:
+        res.append(line)
+    #print(res[0])
+    sync = []
+    sync = res[0].split(' ')
+    #print(sync[2])
+    sync2 = []
+    sync2 = sync[2].split(',')
+    #print(sync2[0])
+    if sync2[0] == "leap_alarm":
+        pixels[p_tracker] = yellow
+    elif sync2[0] == "leap_none":
+        pixels[p_tracker] = black
+
+
 def eventLoop():
     # Buffer for a packet received from yaAGC.
     packetSize = 4
@@ -988,6 +1011,7 @@ def eventLoop():
     didSomething = False
     while True:
         gettemperature()
+        check_ntp()
         if keypressed == 0 and idleclock == 1:
             #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
             clock()
