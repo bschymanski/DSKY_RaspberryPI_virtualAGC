@@ -307,6 +307,8 @@ idleclock_second = "00"
 idleclock_second_old = "00"
 temp_minute = "00"
 temp_minute_old = "00"
+temp_minute_ntp = "00"
+temp_minute_old_ntp = "00"
 
 #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
 
@@ -962,6 +964,7 @@ def gettemperature():
     temp_minute = now_temp.strftime("%M")
     if temp_minute[1] !=  temp_minute_old[1]:
         #print("temp 1 minute check")
+        #
         temp_minute_old = temp_minute
         try:
             #f = open("/sys/class/thermal/thermal_zone0/temp", "r")
@@ -979,26 +982,36 @@ def gettemperature():
     #print(f'pifan {pifan} {type(pifan)}')
     #print(f'pitemp {pitemp} {type(pitemp)}')
 
+
+# https://www.geeksforgeeks.org/python-execute-and-parse-linux-commands/
+# https://www.cyberciti.biz/faq/linux-unix-bsd-is-ntp-client-working/
 def check_ntp(args = '-c rv'):
-    cmd = 'ntpq'
-    temp = subprocess.Popen([cmd, args], stdout = subprocess.PIPE)
-    output = str(temp.communicate())
-    output = output.split('\n')
-    output = output[0].split('\\')
-    res = []
-    for line in output:
-        res.append(line)
-    #print(res[0])
-    sync = []
-    sync = res[0].split(' ')
-    #print(sync[2])
-    sync2 = []
-    sync2 = sync[2].split(',')
-    #print(sync2[0])
-    if sync2[0] == "leap_alarm":
-        pixels[p_tracker] = yellow
-    elif sync2[0] == "leap_none":
-        pixels[p_tracker] = black
+    global temp_minute_ntp, temp_minute_old_ntp
+    now_temp = datetime.now() # current date and time
+    temp_minute_ntp = now_temp.strftime("%M")
+    if temp_minute_ntp[1] !=  temp_minute_old_ntp[1]:
+        temp_minute_old_ntp = temp_minute_ntp
+    
+        cmd = 'ntpq'
+        temp = subprocess.Popen([cmd, args], stdout = subprocess.PIPE)
+        output = str(temp.communicate())
+        temp.kill()
+        output = output.split('\n')
+        output = output[0].split('\\')
+        res = []
+        for line in output:
+            res.append(line)
+        #print(res[0])
+        sync = []
+        sync = res[0].split(' ')
+        #print(sync[2])
+        sync2 = []
+        sync2 = sync[2].split(',')
+        #print(sync2[0])
+        if sync2[0] == "leap_alarm":
+            pixels[p_tracker] = yellow
+        elif sync2[0] == "leap_none":
+            pixels[p_tracker] = black
 
 
 def eventLoop():
@@ -1010,14 +1023,18 @@ def eventLoop():
     global keypressed, idleclock, connectToAGCneeded
     didSomething = False
     while True:
-        gettemperature()
-        check_ntp()
+        #
+        #gettemperature()
+        #check_ntp()
         if keypressed == 0 and idleclock == 1:
             #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
+            gettemperature()
+            check_ntp()
             clock()
         elif keypressed == 1 and idleclock == 1:
             #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
-        
+            gettemperature()
+            check_ntp()
             clock()
         elif keypressed == 1 and idleclock == 2:
             # a key has been pressed, which means we want to play with the AGC.
