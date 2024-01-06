@@ -871,6 +871,7 @@ connectToAGCneeded = 0
 # user-defined function inputsForAGC (in which case a message is sent to yaAGC).
 # But this section has no target-specific code, and shouldn't need to be modified
 # unless there are bugs.
+old_week = "00"
 old_year = "0000"
 old_month = "00"
 old_day = "00"
@@ -880,12 +881,17 @@ old_second = "00"
 old_millisecond = "0"
 old_millisecond2 = "0"
 def clock():
-    global keypressed, idleclock, old_year, old_month, old_day, old_hour, old_minute, old_second, old_millisecond, old_millisecond2
+    global keypressed, idleclock, old_week, old_year, old_month, old_day, old_hour, old_minute, old_second, old_millisecond, old_millisecond2
     if keypressed == 0 and idleclock == 1:
         #print (f'keypressed {keypressed} {type(keypressed)} idleclock {idleclock} {type(idleclock)}')
         pixels[p_stby] = white
         pixels[p_key_rel] = white
         now = datetime.now() # current date and time
+        week = now.strftime("%W")
+        if (old_week != week):
+            nextion("PROG1", week[0])
+            nextion("PROG2", week[1])
+            old_week = week
         year = now.strftime("%Y")
         if (old_year != year):
             nextion("VERB1", year[0])
